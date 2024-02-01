@@ -72,8 +72,8 @@ grey = get_greyscale(img)
 thresh = thresholding(grey)
 cv2.imwrite('threshold.jpg', thresh)
 
-cv2.imshow('thresh', thresh)
-cv2.waitKey(0)
+# cv2.imshow('thresh', thresh)
+# cv2.waitKey(0)
 # erosion = erode(thresh)
 # dilate = dilation(erosion)
 # opening = opening(dilate)
@@ -84,13 +84,59 @@ sorted_contours = sort_contours_desc(contours)
 N = 1
 largest_contours = sorted_contours[:N]
 
-# Draw contours on the original image (for visualization)
+# # Draw contours on the original image (for visualization)
 cv2.drawContours(original_img_rgb, largest_contours, -1, (0, 255, 0), 3)
 
+# # Display the result
+# cv2.imshow('Output', original_img_rgb)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+# Assuming N is the number of contours you want to draw rectangles around
+# Define the size of the rectangle you want to draw (width, height)
+rect_width, rect_height = 100, 100  # Example size, adjust as needed
+
+# for contour in largest_contours[:N]:
+#     # Calculate the center of the contour
+#     M = cv2.moments(contour)
+#     if M["m00"] != 0:
+#         cX = int(M["m10"] / M["m00"])
+#         cY = int(M["m01"] / M["m00"])
+#     else:
+#         cX, cY = 0, 0
+
+#     # Define the top left corner of the rectangle
+#     top_left_corner = (cX - rect_width // 2, cY - rect_height // 2)
+
+#     # Draw the rectangle on the original image
+#     cv2.rectangle(original_img_rgb, top_left_corner, (top_left_corner[0] + rect_width, top_left_corner[1] + rect_height), (0, 255, 0), 3)
+
 # Display the result
-cv2.imshow('Output', original_img_rgb)
+cv2.imshow('Output with Fixed-Size Rectangles', original_img_rgb)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+
+# for i, contour in enumerate(largest_contours[:N]):
+#     # Get the bounding rectangle for each contour
+#     x, y, w, h = cv2.boundingRect(contour)
+
+#     # Crop the original image to this bounding rectangle
+#     cropped_image = original_img_rgb[y:y+h+50, x:x+w+50]
+
+#     # Optionally, save or display the cropped image
+#     cv2.imwrite(f'cropped_image_{i+1}.jpg', cropped_image)
+#     cv2.imshow(f'Cropped Image {i+1}', cropped_image)
+
+#     # Draw the bounding rectangle on the original image for visualization
+#     cv2.rectangle(original_img_rgb, (x, y), (x+w, y+h), (0, 255, 0), 3)
+
+# # After the loop, display the original image with bounding rectangles drawn
+# cv2.imshow('Original Image with Bounding Rectangles', original_img_rgb)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
+
+
 
 result = pytesseract.image_to_string(thresh,config=custom_config);
 print(result)
