@@ -165,8 +165,8 @@ def process_image_hsv_color(image):
             # cv2.rectangle(raw_image, (x,y), (x+w, y+h), (0,255,0),2)
             cv2.rectangle(raw_image2, (x,y), (x+w, y+h), (0,255,0),2)
             cropped_region = raw_image[y:y+h, x:x+w]
-            cv2.imshow("raw_image2", cropped_region)
-            cv2.waitKey(0)
+            # cv2.imshow("raw_image2", cropped_region)
+            # cv2.waitKey(0)
             # deskewed = deskew(cropped_region)
             # denoised = remove_noise(deskewed)
             # Perform OCR on the cropped region
@@ -183,14 +183,14 @@ def process_image_hsv_color(image):
                     cX, cY = 0, 0
 
                 # Define a region around the centroid
-                radius = 100  # Adjust the radius as needed to control the region size
-                x = max(0, cX - radius)
-                y = max(0, cY - radius)
-                w = min(raw_image.shape[1], cX + radius) - x
-                h = min(raw_image.shape[0], cY + radius) - y
+                radius = 220  # Adjust the radius as needed to control the region size
+                # x = max(0, cX - radius)
+                # y = max(0, cY - radius)
+                # w = min(raw_image.shape[1], cX + radius) - x
+                # h = min(raw_image.shape[0], cY + radius) - y
 
                 # Crop the region from the original image
-                cropped_region2 = raw_image[y:y+h, x:x+w].copy()
+                cropped_region2 = raw_image[y-10:y+radius-72, x:x+radius].copy()
                 
                 cv2.imwrite('./output/cropped'+str(n)+'.jpg', cropped_region2)
                 ocr = f'Text: {text}, Probability: {prob:.3f}'
