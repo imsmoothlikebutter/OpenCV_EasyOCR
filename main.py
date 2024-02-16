@@ -5,9 +5,12 @@ import re
 import os
 import time
 import imutils
+import keras_ocr
+import glob
+import keras_ocr.tools
 
 start_time = time.time()
-
+pipeline = keras_ocr.pipeline.Pipeline()
 reader = easyocr.Reader(['en'])
 img = cv2.imread('./input/XYPMenu-Original.png')
 if img is None:
@@ -150,9 +153,11 @@ def process_image_hsv_color(image):
     raw_image = imutils.resize(image, width=1000)
     raw_image2 = raw_image.copy()
     img_hsv = cv2.cvtColor(raw_image, cv2.COLOR_BGR2HSV)
+    cv2.imwrite('./hsv_color/img_hsv.jpg', img_hsv)
     # cv2.imshow("image_hsv",img_hsv)
     # cv2.waitKey(0)
     mask = cv2.inRange(img_hsv, (170, 170, 170), (255,255,255))
+    cv2.imwrite('./hsv_color/img_mask.jpg',mask)
     # cv2.imshow("mask",mask)
     # cv2.waitKey(0)
 
@@ -165,138 +170,55 @@ def process_image_hsv_color(image):
             # cv2.rectangle(raw_image, (x,y), (x+w, y+h), (0,255,0),2)
             cv2.rectangle(raw_image2, (x,y), (x+w, y+h), (0,255,0),2)
             cropped_region = raw_image[y:y+h, x:x+w]
+            cv2.imwrite('./contours/cropped'+str(n)+'.jpg', cropped_region)
+            confirmed_contours.append(contour)
+            radius = 220 
+            cropped_region2 = raw_image[y-10:y+radius-72, x:x+radius].copy()
+            cv2.imwrite('./output/cropped'+str(n)+'.jpg', cropped_region2)
             # cv2.imshow("raw_image2", cropped_region)
             # cv2.waitKey(0)
             # deskewed = deskew(cropped_region)
-            # denoised = remove_noise(deskewed)
+            # denoised = remove_noise(cropped_region)
             # Perform OCR on the cropped region
-            result = reader.readtext(cropped_region)
-            for (bbox, text, prob) in result:
-                confirmed_contours.append(contour)
-                cv2.imwrite('./ocr_roi/ocr_cropped_region'+str(n)+'.jpg', cropped_region)
-                # Get the centroid (center) of the contour
-                M = cv2.moments(contour)
-                if M["m00"] != 0:
-                    cX = int(M["m10"] / M["m00"])
-                    cY = int(M["m01"] / M["m00"])
-                else:
-                    cX, cY = 0, 0
+            # result = reader.readtext(cropped_region)
+            # for (bbox, text, prob) in result:
+            #     cv2.imwrite('./ocr_roi/ocr_cropped_region'+str(n)+'.jpg', cropped_region)
 
-                # Define a region around the centroid
-                radius = 220  # Adjust the radius as needed to control the region size
-                # x = max(0, cX - radius)
-                # y = max(0, cY - radius)
-                # w = min(raw_image.shape[1], cX + radius) - x
-                # h = min(raw_image.shape[0], cY + radius) - y
-
-                # Crop the region from the original image
-                cropped_region2 = raw_image[y-10:y+radius-72, x:x+radius].copy()
-                
-                cv2.imwrite('./output/cropped'+str(n)+'.jpg', cropped_region2)
-                ocr = f'Text: {text}, Probability: {prob:.3f}'
-                ocr_results.append(ocr)
-                print(ocr)
+            #     ocr = f'Text: {text}, Probability: {prob:.3f}'
+            #     ocr_results.append(ocr)
+            #     print(ocr)
     
     # # cv2.imshow("image",raw_image)
     # # cv2.waitKey(0)
     # return confirmed_coordinates
+                
+def perform_keras_ocr():
+    # List of image paths in the folder
+    image_paths = glob.glob(os.path.join('contours', '*.jpg'))  # You can add more patterns if needed
+    # Read images using keras_ocr
+    output_images = [keras_ocr.tools.read(image_path) for image_path in image_paths]
+    predictions = pipeline.recognize(output_images)
+    # Print out the results
+    for image_path, prediction in zip(image_paths, predictions):
+        print(f"Results for {os.path.basename(image_path)}:")
+        for text, box in prediction:
+            ocr = f'- Detected text: {text}'
+            print(ocr)
+            ocr_results.append(ocr)
+
+
+
+
                         
 confirmed_contours = []
 ocr_results = []
 contours_coordinates = process_image_hsv_color(img)
-# sorted_contours = sort_contours_desc(contours)
+perform_keras_ocr()
 
-# N = 5
-# largest_contours = sorted_contours[:N]
-# largest_contours = sorted_contours
-
-# Draw contours on the original image (for visualization)
-# cv2.drawContours(original_img_rgb, largest_contours, -1, (0, 255, 0), 3)
-
-# Specify text properties
-font = cv2.FONT_HERSHEY_SIMPLEX
-font_scale = 0.8
-font_thickness = 2
-text = "Text: {text}, Probability: {prob}, Area: {area}"
-text_color = (0, 0, 0)  # Black color
-
-# Calculate the width and height of the text box
-(text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, font_thickness)
-# max_area_threshold = 2000
-# # Iterate through the largest contours
-# for n, contour in enumerate(contours_coordinates):
-#     # Get the coordinates of the bounding box
-#     x, y, w, h = cv2.boundingRect(contour)
-#     area = cv2.contourArea(contour)
-#     if ratio < 2 and area < max_area_threshold:
-#         # Crop the region from the original image
-#         cropped_region = thresh[y:y+h, x:x+w]
-#         deskewed = deskew(cropped_region)
-#         denoised = remove_noise(deskewed)
-#         # Perform OCR on the cropped region
-#         result = reader.readtext(denoised)
-#         for (bbox, text, prob) in result:
-#             text = re.sub(r'[^0-9]', '', text)
-#             if(text):
-#                 if(prob > 0.3):
-#                     confirmed_contours.append(contour)
-#                     cv2.imwrite('./ocr_roi/ocr_cropped_region'+str(n)+'.jpg', cropped_region)
-#                     # Get the centroid (center) of the contour
-#                     M = cv2.moments(contour)
-#                     if M["m00"] != 0:
-#                         cX = int(M["m10"] / M["m00"])
-#                         cY = int(M["m01"] / M["m00"])
-#                     else:
-#                         cX, cY = 0, 0
-
-#                     # Define a region around the centroid
-#                     radius = 200  # Adjust the radius as needed to control the region size
-#                     x = max(0, cX - radius)
-#                     y = max(0, cY - radius)
-#                     w = min(thresh.shape[1], cX + radius) - x
-#                     h = min(thresh.shape[0], cY + radius) - y
-
-#                     # Crop the region from the original image
-#                     cropped_region2 = img[y:y+h, x:x+w].copy()
-#                     # Set the text start position
-#                     x, y = 0, 30  # You can change this to place the text at a different position
-
-#                     # Draw the white rectangle (background for the text)
-#                     cv2.rectangle(cropped_region2, (x, y - text_height - 10), (x + text_width, y + 10), (255, 255, 255), -1)
-
-#                     # Add the text on the image
-#                     cv2.putText(cropped_region2,  f'B/W Ratio: {ratio:.3f}, Area: {area}', (x, y), font, font_scale, text_color, font_thickness)
-#                     cv2.imwrite('./output/cropped'+str(n)+'.jpg', cropped_region2)
-#                     ocr = f'Text: {text}, Probability: {prob:.3f}'
-#                     ocr_results.append(ocr)
-#                     print(ocr)
 
 with open('./output/OCR_Result.txt', 'w') as file:
     for result in ocr_results:
         file.write(result+'\n')
-
-# Function to generate a bright color
-def generate_bright_color(index):
-    # We'll use a simple strategy to cycle through different bright colors
-    colors = [
-        (255, 0, index % 256),       # Red to Yellow (keeping Green at 0 and varying Blue)
-        (255 - index % 256, 255, 0), # Yellow to Green (reducing Red and keeping Blue at 0)
-        (0, 255, index % 256),       # Green to Cyan (keeping Red at 0 and varying Blue)
-        (index % 256, 255 - index % 256, 255), # Cyan to Blue (varying Red and reducing Green)
-        (255, 0, 255 - index % 256), # Magenta to Red (keeping Green at 0 and reducing Blue)
-        (255, index % 256, 255),     # Pink to Magenta (varying Green and keeping Blue at 255)
-    ]
-    return colors[index % len(colors)]
-
-for i, contour in enumerate(confirmed_contours):
-    # Generate a bright color for each contour
-    color = generate_bright_color(i)
-    
-    # Draw the contour on the image
-    cv2.drawContours(contour_showcase, [contour], -1, color, 3)
-
-# cv2.drawContours(contour_showcase, confirmed_contours, -1, (0, 255, 0), 3)
-cv2.imwrite('./contours/contour-showcase.jpeg', contour_showcase)
 
 
 end_time = time.time()  # Record the end time
